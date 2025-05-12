@@ -1,8 +1,9 @@
-import { Video } from "../models/video.model"
-import { ApiError } from "../utils/apiError"
-import { ApiResponse } from "../utils/apiResponse"
-import { asyncHandler } from "../utils/asyncHandler"
-import { uploadOnCloudinary } from "../utils/cloudinary"
+import mongoose from "mongoose"
+import { Video } from "../models/video.model.js"
+import { ApiError } from "../utils/apiError.js"
+import { ApiResponse } from "../utils/apiResponse.js"
+import { asyncHandler } from "../utils/asyncHandler.js"
+import { uploadOnCloudinary } from "../utils/cloudinary.js"
 
 //! yet to check for js
 //! yet to redefine the comments
@@ -12,15 +13,14 @@ import { uploadOnCloudinary } from "../utils/cloudinary"
 
 const publishAvideo = (asyncHandler(async (req,res)=>{
     // authentication, videoFile, title, thumbnail, description
-    const {user} = req.user
+    const user = req.user
     const {title,description} = req.body
     const videoFileLocalPath = req.files?.videoFile[0]?.path
-    
     let thumbnailLocalPath;
     thumbnailLocalPath = req.files?.thumbnail[0]?.path
-    // !  thumbnail case needs to be handled
+    // ! thumbnail case needs to be handled
     
-    if(!(user && title && description && videoFile)){
+    if(!(user && title && description && videoFileLocalPath)){
         throw new ApiError(400,"All of the fields except thumbnail are required")
     }
 
@@ -39,10 +39,9 @@ const publishAvideo = (asyncHandler(async (req,res)=>{
         thumbnail:thumbnail?.url || "",
         title,
         description,
-
     })
 
-    if(!videoFile){
+    if(!video){
         throw new ApiError(500,"Video is not published")
     }
 
@@ -52,11 +51,12 @@ const publishAvideo = (asyncHandler(async (req,res)=>{
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+    // console.log(typeof videoId )
     if(!videoId){
         throw new ApiError(500,"Video id is not provided")
     }
-    
-    const video = await Video.findById(videoId)
+    console.log(videoId)
+    const video = await Video.findById(new mongoose.Types.ObjectId( videoId ))
     
     if(!video){
         throw new ApiError(500,"Video does not exist")
@@ -67,13 +67,13 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    const {user} = req.user
+    const user = req.user
 
     //! Fresh new video file updation is not managed yet
 
     // if not owner
-    const video = await Video.findById(videoId)
-    if(user._id !== video.owner){
+    const video = await Video.findById(new mongoose.Types.ObjectId( videoId ))
+    if(String(user._id) !== String(video.owner)){
         throw new ApiError(400,"Unauthorized access to modify the video")
     }
 
@@ -84,22 +84,21 @@ const updateVideo = asyncHandler(async (req, res) => {
     let thumbnailLocalPath;
     thumbnailLocalPath = req.files?.thumbnail[0]?.path
 
-
-    const thumbnail = thumbnailLocalPath ?await uploadOnCloudinary() : undefined;
-    if(!thumbnail) updateData.thumbnail = thumbnail
+    const thumbnail = thumbnailLocalPath ? await uploadOnCloudinary(thumbnailLocalPath) : undefined;
+    if(thumbnail) updateData.thumbnail = thumbnail.url
 
     
     for(const [key,val] of Object.entries(updateData)){
         video[key] = val;
     }
-    video.save()
+    await video.save()
 
     res.status(200).json(new ApiResponse(200,updateData,"Data has been updated successfully..."))
 })
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    const {user} = req.user
+    const user = req.user
 
     if(!videoId){
         throw new ApiError(400,"Video id not provided")
@@ -120,22 +119,21 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 const tooglePublishButton = asyncHandler(async (req,res)=>{
     const {videoId}=  req.params
-    const {published}= req.body || undefined
-    const {user} = req.user
+    const {published}= req.body
+    const user = req.user
     
     if(!videoId){
         throw new ApiError(400,"No id provided to toogle publish")
     }
-    const video = await Video.findById(videoId)
+    const video = await Video.findById(new mongoose.Types.ObjectId( videoId ))
 
-    if(user._id !== video.owner){
+    if(String(user._id) !== String(video.owner)){
         throw new ApiError(400,"Unauthorized access to toogle publish button")
     }
 
-    const isPublished = published === undefined? true:published;
-
-    video.isPublished = isPublished
-
+    video.isPublished = published
+    await video.save()
+    
     if(!video){
         throw new ApiError(400,"No vidoe found with corresponding id")
     }

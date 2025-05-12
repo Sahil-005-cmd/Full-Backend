@@ -106,7 +106,6 @@ const loginUser = asyncHandler(async (req,res)=>{
     // bcrypt the password and verify
     // tokens
     // send cookie
-    console.log(req.body)
     const {username,email,password} = req.body
     // const givenEmail = email?true:false;
     // const givenUsername = username?true:false;
