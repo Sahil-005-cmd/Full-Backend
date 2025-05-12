@@ -9,6 +9,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary"
 //! any CUD operation req authentication if user is owner separate funciton is not implemented 
 //! not mentioned return statement at end of every method
 
+
 const publishAvideo = (asyncHandler(async (req,res)=>{
     // authentication, videoFile, title, thumbnail, description
     const {user} = req.user
@@ -117,4 +118,29 @@ const deleteVideo = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200,{},"Video has been deleted successfully..."))
 })
 
-export { publishAvideo, getVideoById, updateVideo, deleteVideo }
+const tooglePublishButton = asyncHandler(async (req,res)=>{
+    const {videoId}=  req.params
+    const {published}= req.body || undefined
+    const {user} = req.user
+    
+    if(!videoId){
+        throw new ApiError(400,"No id provided to toogle publish")
+    }
+    const video = await Video.findById(videoId)
+
+    if(user._id !== video.owner){
+        throw new ApiError(400,"Unauthorized access to toogle publish button")
+    }
+
+    const isPublished = published === undefined? true:published;
+
+    video.isPublished = isPublished
+
+    if(!video){
+        throw new ApiError(400,"No vidoe found with corresponding id")
+    }
+
+    res.status(200).json(new ApiResponse(200,{isPublished:video.isPublished},"Toogle button has been changed"))
+})
+
+export { publishAvideo, getVideoById, updateVideo, deleteVideo, tooglePublishButton}
