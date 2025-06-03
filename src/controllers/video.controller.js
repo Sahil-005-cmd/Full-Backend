@@ -10,7 +10,6 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js"
 //! any CUD operation req authentication if user is owner separate funciton is not implemented 
 //! not mentioned return statement at end of every method
 
-
 const publishAvideo = (asyncHandler(async (req,res)=>{
     // authentication, videoFile, title, thumbnail, description
     const user = req.user
@@ -133,7 +132,7 @@ const tooglePublishButton = asyncHandler(async (req,res)=>{
 
     video.isPublished = published
     await video.save()
-    
+
     if(!video){
         throw new ApiError(400,"No vidoe found with corresponding id")
     }
